@@ -10,6 +10,8 @@ using FrooxEngine.CommonAvatar;
 using FrooxEngine.UIX;
 using System.Security.Cryptography.X509Certificates;
 using static AxisAlignerDebug.Patch;
+using Newtonsoft.Json;
+using System.ComponentModel;
 
 namespace AxisAlignerDebug
 {
@@ -22,8 +24,8 @@ namespace AxisAlignerDebug
 
         public static ModConfiguration Config;
 
-        static public SlotRefList _SlotRefList;
-
+        private static SlotRefList _SlotRefList;
+        private static List<SlotRef> RefList;
         [AutoRegisterConfigKey]
         private static ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Enabled", () => true);
 
@@ -33,10 +35,11 @@ namespace AxisAlignerDebug
             Config.Save(true);
             Harmony harmony = new Harmony("com.zahndy.AxisAlignerDebug");
             harmony.PatchAll();
+            RefList = new List<SlotRef>();
             _SlotRefList = new SlotRefList();
         }
 
-        public class SlotRef
+        private class SlotRef
         {
             public User user = null;
             public string UserName;
@@ -49,31 +52,44 @@ namespace AxisAlignerDebug
             }
         }
 
-        public class SlotRefList
+        static class SlotList
         {
-            public List <SlotRef> RefList;
+           // Slot user = RootSpace.DefaultSpace.LocalUserSpace
+           // Slot FlagSlot = user.LocalUserRoot.Slot.AddSlot("CustomBadgesFlag");
+           // FlagSlot.Tag = "CustomBadgesFlag";
 
-            public SlotRefList()
-            {
-                RefList = new List <SlotRef>();
-            }
+                //user / id
+                //world / id
+
+        }
+
+        private class SlotRefList
+        {                 
+
             public void AddRef(AxisAligner component)
             {
-                Msg("AddRef");
+                Msg("AxisAligner OnAwake: " + component.Slot.Parent.Name);
+                Msg(component.Slot.ParentHierarchyToString());
                 SlotRef sr = new SlotRef();
-                User usr = component.Slot.ActiveUser;
+                User usr = component.Slot.Parent.ActiveUser;
                 if (usr != null)
                 {
                     sr.user = usr;
                     sr.UserName = usr.UserName;
+                    Msg("from: " + usr.UserName);
                 }
                 sr.instance = component;
                 sr.slot = component.Slot;
                 sr.Hash = component.GetHashCode();
+                Msg("AxisAligner __instance.Slot.Name: " + component.Slot.Parent.Name);
+                Msg("AddRef sr.slot.Name: " + sr.slot.Parent.Name);
                 RefList.AddItem(sr);
-                Msg("AddItem");
-               //Array.Sort(RefList);
-               Msg(string.Join(",", RefList));
+                Msg("AddItem: " + sr.Hash);
+                //Array.Sort(RefList);
+                //Msg(string.Join(",", RefList));
+                Msg("RefList Length: " + RefList.Count.ToString());
+                Msg("RefList: " + JsonConvert.SerializeObject(RefList));
+
                 RefList = RefList.OrderBy(var => var != null ? var.UserName : "Null").ToList();
             }
             public void RemoveRef(int hash)
@@ -82,43 +98,25 @@ namespace AxisAlignerDebug
             }
             public void PrintDebug(StringBuilder str)
             {
-                str.AppendLine(" --------------- axisaligners --------------- ");
-                if (RefList != null)
-                {
-                    if (RefList.Count > 0)
-                    {
-                        foreach (var slotref in RefList)
-                        {
-                            str.AppendLine(slotref.UserName + " : " + slotref.slot.Name + " - " + slotref.slot.GetObjectRoot());
-                        }
-                        str.AppendLine(" RefList.Count > 0 ");
-                    }
-                    else
-                    {
-                        str.AppendLine(" RefList.Count < 0 ");
-                    }
-                }
-                else 
-                {
-                    str.AppendLine(" RefList = null ");
-                }
-                str.AppendLine(" -------------------------------------------- ");
+              
+            }
+            public int Cnt()
+            {
+                return RefList.Count;
             }
         }
 
 
-            [HarmonyPatch(typeof(AxisAligner))]
+         [HarmonyPatch(typeof(AxisAligner))]
         class AxisAligner_OnAwake_Patch
         {
             [HarmonyPrefix]
-            [HarmonyPatch("OnAwake")]
+            [HarmonyPatch("OnAwake")] // change to OnCommonUpdate
             static void Postfix(AxisAligner __instance)
             {
-
                 if (Config.GetValue(ENABLED))
                 {
-                    Msg("AxisAligner OnAwake: ");
-                    _SlotRefList.AddRef(__instance);
+                   Patch._SlotRefList.AddRef(__instance); 
                 }
             }
             
@@ -148,7 +146,23 @@ namespace AxisAlignerDebug
             {
                 if (Config.GetValue(ENABLED))
                 {
-                    _SlotRefList.PrintDebug(str);
+                    // _SlotRefList.PrintDebug(str);
+
+                    str.AppendLine(" --------------- axisaligners --------------- ");
+
+                        if (Patch._SlotRefList.Cnt() > 0)
+                        {
+                           // foreach (var slotref in RefList)
+                           // {
+                           //     str.AppendLine(slotref.UserName + " : " + slotref.slot.Name + " - " + slotref.slot.GetObjectRoot());
+                           // }
+                            str.AppendLine(" RefList.Count > 0  :) ");
+                        }
+                        else
+                        {
+                            str.AppendLine(" RefList.Count < 0 ");
+                        }
+                    str.AppendLine(" -------------------------------------------- ");
                 }
             }
         }
