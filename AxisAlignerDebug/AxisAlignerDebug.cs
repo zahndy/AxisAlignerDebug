@@ -8,6 +8,8 @@ using ResoniteModLoader;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.UIX;
+using System.Security.Cryptography.X509Certificates;
+using static AxisAlignerDebug.Patch;
 
 namespace AxisAlignerDebug
 {
@@ -20,6 +22,8 @@ namespace AxisAlignerDebug
 
         public static ModConfiguration Config;
 
+        static public SlotRefList _SlotRefList;
+
         [AutoRegisterConfigKey]
         private static ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Enabled", () => true);
 
@@ -29,9 +33,81 @@ namespace AxisAlignerDebug
             Config.Save(true);
             Harmony harmony = new Harmony("com.zahndy.AxisAlignerDebug");
             harmony.PatchAll();
+            _SlotRefList = new SlotRefList();
         }
 
-        [HarmonyPatch(typeof(AxisAligner))]
+        public class SlotRef
+        {
+            public User user = null;
+            public string UserName;
+            public Slot slot;
+            public AxisAligner instance;
+            public int Hash;
+            public SlotRef()
+            {
+                UserName = "World";
+            }
+        }
+
+        public class SlotRefList
+        {
+            public List <SlotRef> RefList;
+
+            public SlotRefList()
+            {
+                RefList = new List <SlotRef>();
+            }
+            public void AddRef(AxisAligner component)
+            {
+                Msg("AddRef");
+                SlotRef sr = new SlotRef();
+                User usr = component.Slot.ActiveUser;
+                if (usr != null)
+                {
+                    sr.user = usr;
+                    sr.UserName = usr.UserName;
+                }
+                sr.instance = component;
+                sr.slot = component.Slot;
+                sr.Hash = component.GetHashCode();
+                RefList.AddItem(sr);
+                Msg("AddItem");
+               //Array.Sort(RefList);
+               Msg(string.Join(",", RefList));
+                RefList = RefList.OrderBy(var => var != null ? var.UserName : "Null").ToList();
+            }
+            public void RemoveRef(int hash)
+            {
+                RefList = RefList.Where(refe => refe.Hash != hash).ToList();
+            }
+            public void PrintDebug(StringBuilder str)
+            {
+                str.AppendLine(" --------------- axisaligners --------------- ");
+                if (RefList != null)
+                {
+                    if (RefList.Count > 0)
+                    {
+                        foreach (var slotref in RefList)
+                        {
+                            str.AppendLine(slotref.UserName + " : " + slotref.slot.Name + " - " + slotref.slot.GetObjectRoot());
+                        }
+                        str.AppendLine(" RefList.Count > 0 ");
+                    }
+                    else
+                    {
+                        str.AppendLine(" RefList.Count < 0 ");
+                    }
+                }
+                else 
+                {
+                    str.AppendLine(" RefList = null ");
+                }
+                str.AppendLine(" -------------------------------------------- ");
+            }
+        }
+
+
+            [HarmonyPatch(typeof(AxisAligner))]
         class AxisAligner_OnAwake_Patch
         {
             [HarmonyPrefix]
@@ -42,62 +118,37 @@ namespace AxisAlignerDebug
                 if (Config.GetValue(ENABLED))
                 {
                     Msg("AxisAligner OnAwake: ");
-                    User use = __instance.Slot.ActiveUser;
-                    Slot slotn = __instance.Slot;
-                    Msg("AxisAligner User: "+use.UserName);
-                    Msg("AxisAligner Slot: "+slotn.Name);
-                    Msg("AxisAligner Hashcode: ");
-                    Msg(__instance.GetHashCode());
-                    if (use != null)
-                    {
-                         //user                                   
-                    }
-                    else 
-                    {
-                        //world 
-                        //AxisAligner align;
-                    }
+                    _SlotRefList.AddRef(__instance);
                 }
             }
+            
+        }
+        [HarmonyPatch(typeof(AutoAddChildrenBase))]
+        class AxisAligner_AutoAddChildrenBase_OnDispose_Patch
+        {
             [HarmonyPrefix]
-            [HarmonyPatch("Dispose")]
-            static void Prefix(AxisAligner __instance)
+            [HarmonyPatch("OnDispose")]
+            static void Postfix(AutoAddChildrenBase __instance)
             {
 
                 if (Config.GetValue(ENABLED))
                 {
-                    Msg("AxisAligner Disposed");
-                    Msg(__instance.GetHashCode());
+                    Msg("AutoAddChildrenBase OnDispose");
+                    //_SlotRefList.RemoveRef(__instance.GetHashCode());
                 }
             }
         }
 
-        [HarmonyPatch(typeof(EngineDebugDialog))]
+            [HarmonyPatch(typeof(EngineDebugDialog))]
         class EngineDebugDialog_GenerateBackgroundWorkerDiagnostic_Patch
         {
-           /* [HarmonyPrefix]
-            [HarmonyPatch("OnAttach")]
-            static void Postfix(EngineDebugDialog __instance)
-            {
-
-                if (Config.GetValue(ENABLED))
-                {
-                    Msg("EngineDebugDialog OnAttach:");
-                    Msg(__instance.Slot.ChildrenHierarchyToString());
-                    Msg(__instance._contentRoot.Target.ChildrenHierarchyToString());
-                    
-                }
-            }*/
-
             [HarmonyPrefix]
             [HarmonyPatch("GenerateBackgroundWorkerDiagnostic")]
             static void Prefix(Engine engine, StringBuilder str)
             {
                 if (Config.GetValue(ENABLED))
                 {
-                    str.AppendLine("--------");
-                    str.AppendLine("- Test -");
-                    // return false;
+                    _SlotRefList.PrintDebug(str);
                 }
             }
         }
