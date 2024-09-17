@@ -26,6 +26,9 @@ namespace AxisAlignerDebug
 
         private static SlotRefList _SlotRefList;
         private static List<SlotRef> RefList;
+
+        private static string _testvar = "";
+
         [AutoRegisterConfigKey]
         private static ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Enabled", () => true);
 
@@ -71,7 +74,7 @@ namespace AxisAlignerDebug
                 Msg("AxisAligner OnAwake: " + component.Slot.Parent.Name);
                 Msg(component.Slot.ParentHierarchyToString());
                 SlotRef sr = new SlotRef();
-                User usr = component.Slot.Parent.ActiveUser;
+                User usr = component.Slot.ActiveUser;
                 if (usr != null)
                 {
                     sr.user = usr;
