@@ -2,24 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using HarmonyLib;
 using ResoniteModLoader;
 using FrooxEngine;
-using FrooxEngine.CommonAvatar;
-using FrooxEngine.UIX;
 using Component = FrooxEngine.Component;
 using User = FrooxEngine.User;
-using static AxisAlignerDebug.Patch;
-using Newtonsoft.Json;
-using System.ComponentModel;
-using System.Collections;
-using static OfficialAssets.Graphics.Icons;
-using System.IO;
-using BepuPhysics;
-using System.Threading;
 using Elements.Core;
-using SkyFrost.Base;
 
 namespace AxisAlignerDebug
 {
@@ -35,8 +23,7 @@ namespace AxisAlignerDebug
         [AutoRegisterConfigKey]
         private static ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Enabled", () => true);
 
-        private static SlotRefList _SlotRefList;
-        private static List<SlotRef> RefList;
+        private static SlotRefList _SlotRefList;       
         private static HashSet<int> ComparisonSet;
 
         public override void OnEngineInit()
@@ -63,9 +50,11 @@ namespace AxisAlignerDebug
             public Slot slot;
             public int hash;
             public Slot objRoot;
+            public string worldName;
             public SlotRef(AxisAligner component)
             {
                 instance = component;
+                worldName = "<color=#ed8a09>" + instance.World.Name+"</color>";
                 slot = component.Slot;
                 hash = slot.GetHashCode();
                 user = slot.ActiveUser;
@@ -79,19 +68,18 @@ namespace AxisAlignerDebug
                 { 
                     UserName = "<color=#8cc90b> " + user.UserName+ "</color> ";
                     Msg("Component from User: " + UserName);
-                }
-                
+                }   
             }        
         }
 
         private class SlotRefList
         {
+            private static List<SlotRef> RefList;
             StringBuilder outputStr;
             public SlotRefList()
             {
                 RefList = new List<SlotRef>();
                 outputStr = new StringBuilder();
-                RebuildDebugOutput();
             }
             public void AddRef(AxisAligner component)
             {
@@ -120,9 +108,13 @@ namespace AxisAlignerDebug
                 {
                     foreach (var slotref in RefList)
                     {
-                        outputStr.AppendLine( slotref.UserName 
-                            + "  :  " + slotref.slot.Name 
-                            + "  ->  " + slotref.objRoot.Name);
+                        outputStr.AppendLine(
+                            slotref.worldName
+                            + "  :  " + slotref.UserName
+                            + "  -  " + slotref.objRoot.Name
+                            + "  ...  " + slotref.slot.Parent.Name
+                            + "  ->  " + slotref.slot.Name
+                            );
                         //outputStr.AppendLine(newline);
                     }
                 }
@@ -141,7 +133,14 @@ namespace AxisAlignerDebug
             public int Cnt()
             {
                 return RefList.Count;
-            }     
+            }
+            public void Clear() 
+            { 
+                RefList.Clear();
+                ComparisonSet.Clear();
+                outputStr = new StringBuilder();
+                outputStr.AppendLine("");
+            }
         }
 
         [HarmonyPatch(typeof(AxisAligner))]
@@ -163,6 +162,19 @@ namespace AxisAlignerDebug
             }
             
         }
+
+       /* [HarmonyPatch(typeof(WorldManager))]
+        class WorldManager_FocusWorld_Patch
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch("FocusWorld")]
+            static void Prefix(WorldManager __instance)
+            {
+                _SlotRefList.Clear();
+                Msg("FocusWorld Prefix");
+            }
+
+        }*/
 
         [HarmonyPatch(typeof(AutoAddChildrenBase))]
         class AxisAligner_AutoAddChildrenBase_OnDispose_Patch

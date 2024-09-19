@@ -34,9 +34,6 @@
     <Reference Include="0Harmony">
       <HintPath>..\..\..\..\..\..\..\Steam\SteamApps\common\Resonite\rml_libs\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="BepuPhysics">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Resonite\Resonite_Data\Managed\BepuPhysics.dll</HintPath>
-    </Reference>
     <Reference Include="Elements.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Resonite\Resonite_Data\Managed\Elements.Core.dll</HintPath>
@@ -69,9 +66,6 @@
   <ItemGroup>
     <Compile Include="AxisAlignerDebug.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Steam\steamapps\common\Resonite\Resonite_Data\Managed\BepuPhysics.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
