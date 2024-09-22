@@ -39,9 +39,6 @@ namespace AxisAlignerDebug
             
         }
 
-        // TODO 
-        // Handle Session Changes
-
         private class SlotRef
         {
             public AxisAligner instance;
